@@ -64,11 +64,11 @@ app.ports.sendMessage.subscribe((data) => {
 })
 
 socket.on('game-state-updated', (data) => {
-    // console.log(data)
-    // STATE.gameState = {...data.gameState}
-
-    // renderGameState()
-    // console.log('gameState', STATE.gameState)
+    console.log('game-state-updated', data)
+    app.ports.updateGameState.send(JSON.stringify({
+        board: data.gameState.board,
+        turn: data.gameState.turn === null ? data.gameState.status : data.gameState.turn
+    }))
 })
 // emit chat
 

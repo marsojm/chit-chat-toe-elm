@@ -25,6 +25,8 @@ port otherPlayerTyping : (String -> msg) -> Sub msg
 
 port chat : (String -> msg) -> Sub msg
 
+port updateGameState : (String -> msg) -> Sub msg
+
 -- OUTGOING
 
 port playerTyping : E.Value -> Cmd msg
@@ -44,6 +46,7 @@ subscriptions model =
         , notificationReceived Notification
         , otherPlayerTyping OtherPlayerTyping
         , chat Chat
+        , updateGameState UpdateGameState
     ]
 
 -- ---------------------------
@@ -99,7 +102,19 @@ playerCountDecoder value =
                 
             Err _ -> 0
 
-
+turnDecoder value =
+    let
+        result = D.decodeString (D.field "turn" (D.nullable D.string)) value
+    in
+        case result of
+            Ok val ->
+                case val of
+                    Just "X" -> Turn PlayerX
+                    Just "O" -> Turn PlayerO
+                    Just msg -> GameEnded msg
+                    Nothing -> GameEnded "Unknown state" 
+            _ -> GameEnded "Unknown state"
+                     
 
 boardDecoder value = 
     let 
@@ -109,7 +124,7 @@ boardDecoder value =
             Ok lst -> lst
             Err _ -> []
 
-type GameState = NotConnected | WaitingOtherPlayer | WaitingForStart | TurnX | TurnY | GameEnded
+type GameState = NotConnected | WaitingOtherPlayer | WaitingForStart | Turn Player | GameEnded String
 
 type alias Model =
     { player : Player
@@ -150,6 +165,7 @@ type Msg
     | OtherPlayerTyping String
     | Chat String
     | SendMessage
+    | UpdateGameState String
 
 
 maybeStrToMove : Maybe String -> Maybe Move
@@ -267,6 +283,18 @@ update message model =
             else
                 (model, Cmd.none)
 
+        UpdateGameState value ->
+            let 
+                state = turnDecoder value
+                board = (boardDecoder value)
+                        |> List.map maybeStrToMove
+                
+            in
+                ({ model |
+                    board = board,
+                    state = state
+                }, Cmd.none)
+
 
 
 
@@ -296,21 +324,22 @@ showGameState model =
         WaitingForStart
             ->   p [ ] [ text "Waiting for someone to start the game" ]
 
-        TurnX 
+        Turn PlayerX 
             -> let
                  msg = case model.player of
                         PlayerX -> "It's your turn!"
                         _ -> "Waiting for other player to make a move..."
                 in
                     p [] [ text msg]
-        TurnY
+        Turn PlayerO
             ->  let
                  msg = case model.player of
                         PlayerO -> "It's your turn!"
                         _ -> "Waiting for other player to make a move..."
                 in
                     p [] [ text msg ] 
-
+        GameEnded msg ->
+            p [] [ text msg ] 
         _ -> p [] []     
 
 
@@ -446,7 +475,7 @@ actionConsole model =
                             [
                                 span [ class "input-group-text" ] [ text <| ((playerToStr model.player) ++ ": ") ]
                             ],
-                        input [ type_ "text", class "form-control", placeholder "Type a message", onInput Typing ] [],
+                        input [ type_ "text", class "form-control", placeholder "Type a message", onInput Typing, value model.message ] [],
                         div [ class "input-group-append" ] 
                             [
                                 button [ class "btn btn-outline-secondary", onClick SendMessage ] [ text "Send" ] 
