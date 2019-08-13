@@ -20,6 +20,8 @@ port participantJoinedGame : (String -> msg) -> Sub msg
 
 port notificationReceived : (String -> msg) -> Sub msg
 
+port otherPlayerTyping : (String -> msg) -> Sub msg
+
 port playerTyping : E.Value -> Cmd msg
 
 -- ---------------------------
@@ -94,6 +96,7 @@ type alias Model =
     , messages : List Message
     , message : String
     , board : List (Maybe Move)
+    , otherPlayerIsTyping : Bool
     }
 
 
@@ -106,6 +109,7 @@ init flags =
         , messages = []
         , message = ""
         , board = []
+        , otherPlayerIsTyping = False
     }
     , Cmd.none )
 
@@ -121,6 +125,7 @@ type Msg
     | ParticipantConnected String
     | Notification String
     | Typing String
+    | OtherPlayerTyping String
 
 
 maybeStrToMove : Maybe String -> Maybe Move
@@ -197,6 +202,15 @@ update message model =
             in
                 ( { model | message = value }, playerTyping data )
 
+        OtherPlayerTyping value ->
+            let 
+                msg = messageDecoder value
+                player = playerDecoder value
+            in
+                ({ model |
+                    otherPlayerIsTyping = True
+                }, 
+                Cmd.none)
 
 
 
@@ -329,6 +343,23 @@ showMessages messages =
     List.map messageToHtml messages
     
 
+feedback : Model -> Html Msg
+feedback model =
+    if model.otherPlayerIsTyping then
+        let
+            other = if model.player == PlayerX then
+                        playerToStr PlayerO
+                    else
+                        playerToStr PlayerX
+        in
+            p [] [
+                em [] [ text other],
+                text " is typing a message..."
+            ]
+    else
+        p [] []
+
+
 chatWindow : Model -> Html Msg
 chatWindow model =
     div [ class "col-4 border-left" ]
@@ -337,7 +368,9 @@ chatWindow model =
                 [
                     div [ id "output" ]
                         (showMessages model.messages),
-                    div [ id "feedback" ] []
+                    div [ id "feedback" ] [
+                        (feedback model)
+                    ]
                 ]
         ]
     
@@ -416,6 +449,7 @@ subscriptions model =
         joinedGame Connected
         , participantJoinedGame ParticipantConnected
         , notificationReceived Notification
+        , otherPlayerTyping OtherPlayerTyping
     ]
 
 -- ---------------------------

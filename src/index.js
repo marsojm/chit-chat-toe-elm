@@ -17,22 +17,6 @@ socket.on('joined-game', (data) => {
         playerCount: data.gameState.playerCount,
         board: data.gameState.board
     }));
-
-
-    // this._state = {
-    //     turn: null,
-    //     board: Array(9).fill(null),
-    //     status: null
-    // } 
-
-    // output.innerHTML += `<p><em>${data.message}</em></p>`
-    // visibleHandle.innerHTML = `${data.handle}:`
-    // handle.value = data.handle
-    // game = data.game
-    // STATE.gameState = {...data.gameState}
-    // gameIdentifier.innerHTML = `${data.game}:`
-    
-    // renderGameState()
 })
 
 socket.on('participant-joined-game', (data) => {
@@ -44,13 +28,19 @@ socket.on('participant-joined-game', (data) => {
 })
 
 socket.on('chat', (data) =>  {
+    // app.ports.chat.send(JSON.stringify({
+    //     player: data.handle,
+    //     message: data.message
+    // })); 
     // output.innerHTML += `<p><strong class="${data.handle === 'X' ? 'text-primary' : 'text-danger'} mr-1">${data.handle}:</strong>${data.message}</p>`
     // feedback.innerHTML = ''
-
 })
 
 
 socket.on('typing', (data) => {
+    app.ports.otherPlayerTyping.send(JSON.stringify({
+            player: data.handle
+    }));
     //feedback.innerHTML = `<p><em>${data.handle}</em> is typing a message...</p>`
 })
 
