@@ -24,6 +24,8 @@ port joinedGame : (String -> msg) -> Sub msg
 
 type Player = NotSet | PlayerX | PlayerY
 
+type Message = ChatMessage Player String | NotificationMessage String
+
 playerDecoder value =
     let 
         val = D.decodeString (D.field "playerName" D.string) value
@@ -36,6 +38,8 @@ playerDecoder value =
                     _   -> NotSet
             Err _ -> NotSet
 
+
+
 gameIdentifierDecoder value =
     let 
         val = D.decodeString (D.field "gameIdentifier" D.string) value
@@ -45,12 +49,22 @@ gameIdentifierDecoder value =
                 
             Err _ -> ""
 
+messageDecoder value =
+    let 
+        val = D.decodeString (D.field "message" D.string) value
+    in
+        case val of
+            Ok message -> message
+                
+            Err _ -> ""
+
 type GameState = NotConnected | WaitingOtherPlayer | TurnX | TurnY | GameEnded
 
 type alias Model =
     { player : Player
     , state : GameState
     , gameIdentifier : String
+    , messages : List Message
     }
 
 
@@ -60,6 +74,7 @@ init flags =
         { player = NotSet
         , state = NotConnected
         , gameIdentifier = ""
+        , messages = []
     }
     , Cmd.none )
 
@@ -81,10 +96,12 @@ update message model =
             let 
                 player = playerDecoder value
                 gameIdentifier = gameIdentifierDecoder value
+                msg = messageDecoder value
             in
                 ( { model | 
                     player = player
                     , gameIdentifier = gameIdentifier
+                    , messages = model.messages ++ [(NotificationMessage msg)]
                  }, Cmd.none) 
 
 
@@ -127,13 +144,41 @@ gameBoard model =
                 ]
         ]
 
+
+messageToHtml message =
+    case message of
+        ChatMessage player msg -> 
+            case player of
+                PlayerX -> p []
+                             [
+                                 strong [ class "text-primary mr-1" ] [ text <| (playerToStr player) ++ ":"],
+                                 text msg
+                             ]
+                PlayerY -> p []
+                             [
+                                 strong [ class "text-danger mr-1" ] [ text <| (playerToStr player) ++ ":"],
+                                 text msg
+                             ]
+                _ -> p [] [ text msg ]
+        NotificationMessage msg -> p []
+                                     [
+                                         em [] [ text msg ]
+                                     ]
+
+showMessages : List Message -> List (Html Msg)
+showMessages messages =
+    List.map messageToHtml messages
+    
+
 chatWindow : Model -> Html Msg
 chatWindow model =
     div [ class "col-4 border-left" ]
         [
             div [ id "chat-window" ]
                 [
-
+                    div [ id "output" ]
+                        (showMessages model.messages),
+                    div [ id "feedback" ] []
                 ]
         ]
     

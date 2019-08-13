@@ -12,7 +12,8 @@ socket.on('joined-game', (data) => {
     console.log('joined', data)
     app.ports.joinedGame.send(JSON.stringify({
         playerName: data.handle,
-        gameIdentifier: data.game
+        gameIdentifier: data.game,
+        message: data.message
     }));
 
 
