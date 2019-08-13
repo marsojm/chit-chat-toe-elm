@@ -63,8 +63,9 @@ type GameState = NotConnected | WaitingOtherPlayer | TurnX | TurnY | GameEnded
 type alias Model =
     { player : Player
     , state : GameState
-    , gameIdentifier : String
+    , gameIdentifier : Maybe String
     , messages : List Message
+    , message : String
     }
 
 
@@ -73,8 +74,9 @@ init flags =
     ( 
         { player = NotSet
         , state = NotConnected
-        , gameIdentifier = ""
+        , gameIdentifier = Nothing
         , messages = []
+        , message = ""
     }
     , Cmd.none )
 
@@ -100,7 +102,7 @@ update message model =
             in
                 ( { model | 
                     player = player
-                    , gameIdentifier = gameIdentifier
+                    , gameIdentifier = Just gameIdentifier
                     , messages = model.messages ++ [(NotificationMessage msg)]
                  }, Cmd.none) 
 
@@ -207,6 +209,12 @@ actionConsole model =
                     ]
             ]
 
+gameIdentifierStr : Model -> String
+gameIdentifierStr model =
+    case model.gameIdentifier of
+        Just identifier -> identifier
+        Nothing -> "You are not connected"
+
 container : Model -> Html Msg
 container model =
     div [ class "container" ]
@@ -226,7 +234,7 @@ container model =
                     p [ ] 
                       [ 
                           text "Game: ",
-                          span [ id "game-identifier" ] [ text model.gameIdentifier ]
+                          span [ id "game-identifier" ] [ text <| gameIdentifierStr model ]
                       ]
                 ]
         ]
