@@ -24,6 +24,8 @@ port joinedGame : (String -> msg) -> Sub msg
 
 type Player = NotSet | PlayerX | PlayerY
 
+type Move = MoveX | MoveY
+
 type Message = ChatMessage Player String | NotificationMessage String
 
 playerDecoder value =
@@ -58,7 +60,26 @@ messageDecoder value =
                 
             Err _ -> ""
 
-type GameState = NotConnected | WaitingOtherPlayer | TurnX | TurnY | GameEnded
+playerCountDecoder value =
+    let 
+        val = D.decodeString (D.field "playerCount" D.int) value
+    in
+        case val of
+            Ok count -> count
+                
+            Err _ -> 0
+
+
+
+boardDecoder value = 
+    let 
+        result = D.decodeString (D.field "board" (D.list (D.nullable D.string))) value
+    in
+        case result of
+            Ok lst -> lst
+            Err _ -> []
+
+type GameState = NotConnected | WaitingOtherPlayer | WaitingForStart | TurnX | TurnY | GameEnded
 
 type alias Model =
     { player : Player
@@ -66,6 +87,7 @@ type alias Model =
     , gameIdentifier : Maybe String
     , messages : List Message
     , message : String
+    , board : List (Maybe Move)
     }
 
 
@@ -77,6 +99,7 @@ init flags =
         , gameIdentifier = Nothing
         , messages = []
         , message = ""
+        , board = []
     }
     , Cmd.none )
 
@@ -91,6 +114,16 @@ type Msg
     = Connected String
 
 
+maybeStrToMove : Maybe String -> Maybe Move
+maybeStrToMove move =
+    case move of
+        Just s 
+            -> case s of
+                "X" -> Just MoveX
+                "Y" -> Just MoveY
+                _ -> Nothing
+        Nothing -> Nothing
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case message of
@@ -99,11 +132,21 @@ update message model =
                 player = playerDecoder value
                 gameIdentifier = gameIdentifierDecoder value
                 msg = messageDecoder value
+                playerCount = playerCountDecoder value
+                state = case playerCount of
+                            2 -> WaitingForStart
+                            1 -> WaitingOtherPlayer
+                            _ -> NotConnected
+
+                board = (boardDecoder value)
+                        |> List.map maybeStrToMove
             in
                 ( { model | 
                     player = player
                     , gameIdentifier = Just gameIdentifier
                     , messages = model.messages ++ [(NotificationMessage msg)]
+                    , state = state
+                    , board = board
                  }, Cmd.none) 
 
 
@@ -124,6 +167,17 @@ navbar =
                 ]
         ]
 
+showGameState : Model -> Html Msg
+showGameState model =
+    case model.state of
+        NotConnected 
+            -> p [ ] [ text "You are not connected to any game." ]
+
+        WaitingOtherPlayer 
+            ->   p [ ] [ text "Waiting for another player to join the game" ]
+
+        _ -> p [] []     
+
 
 gameStatus : Model -> Html Msg
 gameStatus model =
@@ -131,20 +185,57 @@ gameStatus model =
         [
             div [ class "col-8 d-flex justify-content-center" ]
             [
-                text ""
+                showGameState model
             ],
             div [ class "col-4" ] []
         ]
 
+maybeMoveToStr : Maybe Move -> String
+maybeMoveToStr move =
+    case move of
+        Just MoveX -> "X"
+        Just MoveY -> "Y"
+        Nothing -> ""
+
+
+showRow : String -> List (Maybe Move) -> List (Html Msg)
+showRow letter row =
+     [ (button [ class "square bg-info text-white" ] [ text letter]) ] ++
+     List.map (\val -> (button [ class "square" ] [ text <| maybeMoveToStr val ])) row 
+
 gameBoard : Model -> Html Msg
 gameBoard model =
-    div [ class "col-8 px-auto" ]
-        [
-            div [ class "game-board" ]
-                [
+    let 
+        board = model.board
+        row1 = List.take 3 board
+        row2 = board
+               |> List.drop 3 
+               |> List.take 3
+        row3 = board
+               |> List.drop 6 
 
-                ]
-        ]
+        
+    in
+
+        div [ class "col-8 px-auto" ]
+            [
+                div [ class "game-board" ]
+                    [
+                        div [ class "board-row d-flex justify-content-center" ]
+                            [
+                            button [ class "square bg-info text-white" ] []
+                            , button [ class "square bg-info text-white" ] [ text "1" ]
+                            , button [ class "square bg-info text-white" ] [ text "2" ]
+                            , button [ class "square bg-info text-white" ] [ text "3" ]
+                            ],
+                        div [ class "board-row d-flex justify-content-center" ]
+                            (showRow "A" row1),
+                        div [ class "board-row d-flex justify-content-center" ]
+                            (showRow "B" row2),
+                        div [ class "board-row d-flex justify-content-center" ]
+                            (showRow "C" row3)
+                    ]
+            ]
 
 
 messageToHtml message =
