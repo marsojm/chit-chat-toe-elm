@@ -3,7 +3,7 @@ port module Main exposing (Model, Msg(..), init, main, update, view)
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
 import Http exposing (Error(..))
 import Json.Decode as D
 import Json.Encode as E
@@ -20,15 +20,17 @@ port participantJoinedGame : (String -> msg) -> Sub msg
 
 port notificationReceived : (String -> msg) -> Sub msg
 
+port playerTyping : E.Value -> Cmd msg
+
 -- ---------------------------
 -- MODEL
 -- ---------------------------
 
 
 
-type Player = NotSet | PlayerX | PlayerY
+type Player = NotSet | PlayerX | PlayerO
 
-type Move = MoveX | MoveY
+type Move = MoveX | MoveO
 
 type Message = ChatMessage Player String | NotificationMessage String
 
@@ -40,7 +42,7 @@ playerDecoder value =
             Ok player -> 
                 case player of
                     "X" -> PlayerX
-                    "Y" -> PlayerY
+                    "O" -> PlayerO
                     _   -> NotSet
             Err _ -> NotSet
 
@@ -118,6 +120,7 @@ type Msg
     = Connected String
     | ParticipantConnected String
     | Notification String
+    | Typing String
 
 
 maybeStrToMove : Maybe String -> Maybe Move
@@ -126,7 +129,7 @@ maybeStrToMove move =
         Just s 
             -> case s of
                 "X" -> Just MoveX
-                "Y" -> Just MoveY
+                "O" -> Just MoveO
                 _ -> Nothing
         Nothing -> Nothing
 
@@ -180,6 +183,19 @@ update message model =
                 ( { model |
                     messages = model.messages ++ [(NotificationMessage msg)]
                  }, Cmd.none)
+        
+        Typing value ->
+            let 
+                gameId = case model.gameIdentifier of
+                            Just id -> id
+                            _ -> ""
+                data =
+                    E.object
+                        [ ("player", E.string (playerToStr model.player) )
+                        , ("game", E.string gameId)]
+
+            in
+                ( { model | message = value }, playerTyping data )
 
 
 
@@ -221,7 +237,7 @@ showGameState model =
         TurnY
             ->  let
                  msg = case model.player of
-                        PlayerY -> "It's your turn!"
+                        PlayerO -> "It's your turn!"
                         _ -> "Waiting for other player to make a move..."
                 in
                     p [] [ text msg ] 
@@ -244,7 +260,7 @@ maybeMoveToStr : Maybe Move -> String
 maybeMoveToStr move =
     case move of
         Just MoveX -> "X"
-        Just MoveY -> "Y"
+        Just MoveO -> "O"
         Nothing -> ""
 
 
@@ -297,7 +313,7 @@ messageToHtml message =
                                  strong [ class "text-primary mr-1" ] [ text <| (playerToStr player) ++ ":"],
                                  text msg
                              ]
-                PlayerY -> p []
+                PlayerO -> p []
                              [
                                  strong [ class "text-danger mr-1" ] [ text <| (playerToStr player) ++ ":"],
                                  text msg
@@ -328,9 +344,9 @@ chatWindow model =
 playerToStr : Player -> String
 playerToStr player =
     case player of
-        PlayerX -> "X: "
-        PlayerY -> "Y: "
-        _ -> "???: "
+        PlayerX -> "X"
+        PlayerO -> "O"
+        _ -> "???"
 
 actionConsole : Model -> Html Msg
 actionConsole model =
@@ -340,9 +356,9 @@ actionConsole model =
                     [
                         div [ class "input-group-prepend" ]
                             [
-                                span [ class "input-group-text" ] [ text <| playerToStr model.player ]
+                                span [ class "input-group-text" ] [ text <| ((playerToStr model.player) ++ ": ") ]
                             ],
-                        input [ type_ "text", class "form-control", placeholder "Type a message" ] [],
+                        input [ type_ "text", class "form-control", placeholder "Type a message", onInput Typing ] [],
                         div [ class "input-group-append" ] 
                             [
                                 button [ class "btn btn-outline-secondary" ] [ text "Send" ] 

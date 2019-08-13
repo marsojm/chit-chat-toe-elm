@@ -60,6 +60,14 @@ socket.on('notification', (data) => {
     }));
 })
 
+app.ports.playerTyping.subscribe((data) => {
+    console.log('typing', data)
+    socket.emit('typing', {
+        handle: data.player,
+        game: data.game
+    })
+});
+
 socket.on('game-state-updated', (data) => {
     // console.log(data)
     // STATE.gameState = {...data.gameState}
