@@ -28,12 +28,10 @@ socket.on('participant-joined-game', (data) => {
 })
 
 socket.on('chat', (data) =>  {
-    // app.ports.chat.send(JSON.stringify({
-    //     player: data.handle,
-    //     message: data.message
-    // })); 
-    // output.innerHTML += `<p><strong class="${data.handle === 'X' ? 'text-primary' : 'text-danger'} mr-1">${data.handle}:</strong>${data.message}</p>`
-    // feedback.innerHTML = ''
+    app.ports.chat.send(JSON.stringify({
+        playerName: data.handle,
+        message: data.message
+    })); 
 })
 
 
@@ -41,7 +39,6 @@ socket.on('typing', (data) => {
     app.ports.otherPlayerTyping.send(JSON.stringify({
             player: data.handle
     }));
-    //feedback.innerHTML = `<p><em>${data.handle}</em> is typing a message...</p>`
 })
 
 socket.on('notification', (data) => {
@@ -58,6 +55,14 @@ app.ports.playerTyping.subscribe((data) => {
     })
 });
 
+app.ports.sendMessage.subscribe((data) => {
+    socket.emit('chat',{
+        message: data.message,
+        handle: data.player,
+        game: data.gameId
+    })
+})
+
 socket.on('game-state-updated', (data) => {
     // console.log(data)
     // STATE.gameState = {...data.gameState}
@@ -67,15 +72,7 @@ socket.on('game-state-updated', (data) => {
 })
 // emit chat
 
-// emit typing
-
 // on chat
-
-// on typing
-
-// participant joined game
-
-// notification
 
 // game state updated
 

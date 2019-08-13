@@ -13,6 +13,7 @@ import Json.Encode as E
 -- PORTS
 -- ---------------------------
 
+-- INCOMING 
 
 port joinedGame : (String -> msg) -> Sub msg
 
@@ -22,7 +23,28 @@ port notificationReceived : (String -> msg) -> Sub msg
 
 port otherPlayerTyping : (String -> msg) -> Sub msg
 
+port chat : (String -> msg) -> Sub msg
+
+-- OUTGOING
+
 port playerTyping : E.Value -> Cmd msg
+
+port sendMessage : E.Value -> Cmd msg
+
+-- ---------------------------
+-- SUBSCRIPTIONS
+-- ---------------------------
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.batch [
+        joinedGame Connected
+        , participantJoinedGame ParticipantConnected
+        , notificationReceived Notification
+        , otherPlayerTyping OtherPlayerTyping
+        , chat Chat
+    ]
 
 -- ---------------------------
 -- MODEL
@@ -126,6 +148,8 @@ type Msg
     | Notification String
     | Typing String
     | OtherPlayerTyping String
+    | Chat String
+    | SendMessage
 
 
 maybeStrToMove : Maybe String -> Maybe Move
@@ -211,6 +235,37 @@ update message model =
                     otherPlayerIsTyping = True
                 }, 
                 Cmd.none)
+
+        Chat value ->
+            let 
+                msg = messageDecoder value
+                player = playerDecoder value
+
+
+            in
+                ({model |
+                    otherPlayerIsTyping = False,
+                    messages = model.messages ++ [(ChatMessage player msg)]
+                }
+                , Cmd.none)
+
+        SendMessage ->
+            if (String.length model.message) > 0 then
+                let 
+                    gameId = case model.gameIdentifier of
+                            Just id -> id
+                            _ -> ""
+
+                    data = E.object
+                        [ ("player", E.string (playerToStr model.player) )
+                        , ("gameId", E.string gameId)
+                        , ("message", E.string model.message)]
+                in
+                    ( {model | 
+                        message = ""}
+                    ,sendMessage data)
+            else
+                (model, Cmd.none)
 
 
 
@@ -344,7 +399,7 @@ showMessages messages =
     
 
 feedback : Model -> Html Msg
-feedback model =
+feedback model =    
     if model.otherPlayerIsTyping then
         let
             other = if model.player == PlayerX then
@@ -394,7 +449,7 @@ actionConsole model =
                         input [ type_ "text", class "form-control", placeholder "Type a message", onInput Typing ] [],
                         div [ class "input-group-append" ] 
                             [
-                                button [ class "btn btn-outline-secondary" ] [ text "Send" ] 
+                                button [ class "btn btn-outline-secondary", onClick SendMessage ] [ text "Send" ] 
                             ]
                     ]
             ]
@@ -438,19 +493,7 @@ view model =
         ]
 
 
--- ---------------------------
--- SUBSCRIPTIONS
--- ---------------------------
 
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.batch [
-        joinedGame Connected
-        , participantJoinedGame ParticipantConnected
-        , notificationReceived Notification
-        , otherPlayerTyping OtherPlayerTyping
-    ]
 
 -- ---------------------------
 -- MAIN
