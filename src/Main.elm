@@ -16,6 +16,10 @@ import Json.Encode as E
 
 port joinedGame : (String -> msg) -> Sub msg
 
+port participantJoinedGame : (String -> msg) -> Sub msg
+
+port notificationReceived : (String -> msg) -> Sub msg
+
 -- ---------------------------
 -- MODEL
 -- ---------------------------
@@ -112,6 +116,8 @@ init flags =
 
 type Msg
     = Connected String
+    | ParticipantConnected String
+    | Notification String
 
 
 maybeStrToMove : Maybe String -> Maybe Move
@@ -149,6 +155,32 @@ update message model =
                     , board = board
                  }, Cmd.none) 
 
+        ParticipantConnected value -> 
+            let 
+                msg = messageDecoder value
+                playerCount = playerCountDecoder value
+                state = case playerCount of
+                            2 -> WaitingForStart
+                            1 -> WaitingOtherPlayer
+                            _ -> NotConnected
+
+                board = (boardDecoder value)
+                        |> List.map maybeStrToMove
+            in
+                ( { model | 
+                    messages = model.messages ++ [(NotificationMessage msg)]
+                    , state = state
+                    , board = board
+                 }, Cmd.none)
+
+        Notification value ->
+            let 
+                msg = messageDecoder value
+            in
+                ( { model |
+                    messages = model.messages ++ [(NotificationMessage msg)]
+                 }, Cmd.none)
+
 
 
 
@@ -175,6 +207,24 @@ showGameState model =
 
         WaitingOtherPlayer 
             ->   p [ ] [ text "Waiting for another player to join the game" ]
+        
+        WaitingForStart
+            ->   p [ ] [ text "Waiting for someone to start the game" ]
+
+        TurnX 
+            -> let
+                 msg = case model.player of
+                        PlayerX -> "It's your turn!"
+                        _ -> "Waiting for other player to make a move..."
+                in
+                    p [] [ text msg]
+        TurnY
+            ->  let
+                 msg = case model.player of
+                        PlayerY -> "It's your turn!"
+                        _ -> "Waiting for other player to make a move..."
+                in
+                    p [] [ text msg ] 
 
         _ -> p [] []     
 
@@ -348,6 +398,8 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch [
         joinedGame Connected
+        , participantJoinedGame ParticipantConnected
+        , notificationReceived Notification
     ]
 
 -- ---------------------------
