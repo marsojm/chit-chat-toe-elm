@@ -1,18 +1,16 @@
-# Elm 0.19 with Webpack 4, Hot Reloading & Babel 7
+# Elm 0.19 Frontend for Chit-Chat-Toe-Server
 
-[![CircleCI](https://circleci.com/gh/simonh1000/elm-webpack-starter.svg?style=svg)](https://circleci.com/gh/simonh1000/elm-webpack-starter)
+Backend: https://github.com/marsojm/chit-chat-toe-server
 
-Elm dev environment with hot-loading (i.e. state is retained as you edit your code - Hot Module Reloading, HMR)). I use this daily for my professional work. Like elm-community/elm-webpack-starter but using Webpack 4.
 
 ## Installation
 
 Clone this repo into a new project folder and run install script.
-(You will probably want to delete the .git/ directory and start version control afresh.)
 
 With npm
 
 ```sh
-$ git clone git@github.com:simonh1000/elm-webpack-starter.git new-project
+$ git clone https://github.com/marsojm/chit-chat-toe-elm.git new-project
 $ cd new-project
 $ npm install
 ```
@@ -73,34 +71,9 @@ $ npm run analyse
 $ circleci local execute --job build
 ```
 
-<hr />
-
-## ES6
-
-This starter includes [Babel](https://babeljs.io/) so you can directly use ES6 code.
-
-## Changelog
-
- - 3.7.0 - Add elm-analyse
- - 3.6.0 - Add CI script
- - 3.5.0 - Simpler means to work with/out the debug window
- - 3.4.0 - Add ability to start dev mode without debug window
- - 3.3.0 - Switch to elm/http 2.0.0 (and other deps updates)
- - 3.2.0 - Add elm-minify to prod builds (thanks Asger)
- - 3.1.0 - Revert to webpack-dev-server with example
- - 3.0.2 - bugfixes (mostly for tests)
- - 3.0.1 - use publicPath to ensure compatibility with more complex routes
- - 3.0.0 - version 0.19
- - 2.1.0 - switch to webpack-serve (from webpack dev server)
- - 2.0.0
-    - Remove Bootstrap (use purecss as simple alternative - you don't want me choosing your css framework after all)
-    - Compile CSS into separate file
- - 1.2.0 - Webpack 4, Babel 7
- - 1.1.0 - add elm-verify-examples
-
  ## Credits
 
- A long time ago this code was forked from https://github.com/fluxxu/elm-hot-loader
+ This project is based on this template:  https://github.com/simonh1000/elm-webpack-starter
 
  ## How it works
 
