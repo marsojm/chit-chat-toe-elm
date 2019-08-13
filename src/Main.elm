@@ -361,11 +361,17 @@ maybeMoveToStr move =
         Just MoveO -> "O"
         Nothing -> ""
 
-
+moveClass : Maybe Move -> String
+moveClass move =
+    case move of
+        Just MoveX -> "square text-primary"
+        Just MoveO -> "square text-danger"
+        Nothing -> "square"
+    
 showRow : String -> List (Maybe Move) -> List (Html Msg)
 showRow letter row =
      [ (button [ class "square bg-info text-white" ] [ text letter]) ] ++
-     List.map (\val -> (button [ class "square" ] [ text <| maybeMoveToStr val ])) row 
+     List.map (\val -> (button [ class (moveClass val) ] [ text <| maybeMoveToStr val ])) row 
 
 gameBoard : Model -> Html Msg
 gameBoard model =
